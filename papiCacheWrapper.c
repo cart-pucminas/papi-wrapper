@@ -16,7 +16,7 @@ int main(int argc, char **argv)
     long long values[NUM_EVENTS];
     pid_t pid;
     char* newargv[10]; // FIXME: Improve args wrapper
-    int pidStatus;
+    int pidStatus, retval;
     
     /* Start counting events */
     if (PAPI_start_counters(event, NUM_EVENTS) != PAPI_OK) {
@@ -24,9 +24,15 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    /* Wrap your file */
-    if(!(pid = fork()))
-	execv(argv[1], argv);
+   /* Wrap your file */
+    if(!(pid = fork())) {
+        /* Need to set inherit options */
+        if ( (retval = PAPI_attach(*event, pid)) != PAPI_OK) {
+            fprintf(stderr, "PAPI_attach - FAILED\n%s\n", PAPI_strerror(retval));
+            exit(1);
+        }
+        execv(argv[1], argv);
+    }
     waitpid(pid, pidStatus, 0);
 
     /* Read the counters */
